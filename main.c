@@ -60,53 +60,7 @@ static void sighandler(int signal) {
     }
 }
  
-/*
- void httpserver_ProcessRequest(struct evhttp_request *req) {
-    
-    struct evbuffer *inbuff;    
-    char content[MAX_CONTENT_LEN];
-    int contentLen = 0;
-    bzero(content, MAX_CONTENT_LEN);
-    
-    inbuff = evhttp_request_get_input_buffer(req);    
-	while (evbuffer_get_length(inbuff)) 
-    {
-	contentLen += evbuffer_remove(inbuff, content + contentLen, 128);		
-    }
-      
-    struct evbuffer *outbuff = evbuffer_new();
-    
-    char *client_ip;
-    unsigned short client_port;
-
-    evhttp_connection_get_peer(evhttp_request_get_connection(req), &client_ip, &client_port);
-    
-    char* responceMessage;
-    int responceLength;
-    
-    int statuscode = proto(content, contentLen, &responceMessage);        
-    
-    evbuffer_add_printf(outbuff, "%s", responceMessage);
-    
-    free(responceMessage);
-          
-    char outcontentLengthStr[3];
-    sprintf(outcontentLengthStr, "%zu", evbuffer_get_length(outbuff));
-    
-    // Set HTTP headers    
-    evhttp_add_header(req->output_headers, "Content-Type", "application/json");
-    evhttp_add_header(req->output_headers, "Connection", "close");
-    evhttp_add_header(req->output_headers, "Content-Length", outcontentLengthStr);
-
-    // Send reply
-    evhttp_send_reply(req, statuscode, "OK", outbuff);
-
-    // Free memory
-    evbuffer_free(outbuff);    
-}
-*/
-
- int websocket_write(struct lws *wsi_in, char *content, int str_size_in) 
+int websocket_write(struct lws *wsi_in, char *content, int str_size_in) 
 {
     if (content == NULL || wsi_in == NULL)
         return -1;
