@@ -11,16 +11,14 @@
 #include <unistd.h>
 #include <errno.h>
 #include <err.h>
-#include <event.h>
 #include <signal.h>
 #include <libconfig.h>
 #include <syslog.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <locale.h>
-#include <evhttp.h>
-#include <event2/bufferevent.h>
 #include <libpq-fe.h>
+#include <libwebsockets.h>>
 
 #include "cmdparam.h"
 #include "settings.h"
@@ -29,15 +27,14 @@
 
 #define MAX_CONTENT_LEN 1024 * 512
 
+static int destroy_flag = 0;
+
 /*
  * Terminate server
  */
 static void terminate(void)
 {
-    if (event_loopbreak()) 
-    {
-	syslog(LOG_ERR, "Error shutting down server");
-    }
+    destroy_flag = 1;
 }
 
 /**
@@ -62,60 +59,8 @@ static void sighandler(int signal) {
             break;
     }
 }
-
-/**
- * @brief ...
- * 
- * @param host ...
- * @param port ...
- * @param backlog ...
- * @return int
- */
-int httpserver_bindsocket(char* host, int port, int backlog) {
-  int r;
-  int nfd;
-  nfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (nfd < 0) return -1;
  
-  int one = 1;
-  r = setsockopt(nfd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(int));
- 
-  struct sockaddr_in addr;
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = inet_addr(host);
-  addr.sin_port = htons(port);
- 
-  r = bind(nfd, (struct sockaddr*)&addr, sizeof(addr));
-  if (r < 0) return -1;
-  r = listen(nfd, backlog);
-  if (r < 0) return -1;
- 
-  int flags;
-  if ((flags = fcntl(nfd, F_GETFL, 0)) < 0
-      || fcntl(nfd, F_SETFL, flags | O_NONBLOCK) < 0)
-    return -1;
- 
-  return nfd;
-}
- 
- /**
-  * @brief ...
-  * 
-  * @param arg ...
-  * @return void*
-  */
-void* httpserver_Dispatch(void *arg) {
-  event_base_dispatch((struct event_base*)arg);
-  return NULL;
-}
- 
- /**
-  * @brief ...
-  * 
-  * @param req ...
-  * @return void
-  */
+/*
  void httpserver_ProcessRequest(struct evhttp_request *req) {
     
     struct evbuffer *inbuff;    
@@ -159,49 +104,70 @@ void* httpserver_Dispatch(void *arg) {
     // Free memory
     evbuffer_free(outbuff);    
 }
- 
- /**
-  * @brief ...
-  * 
-  * @param req ...
-  * @param arg ...
-  * @return void
-  */
- void httpserver_GenericHandler(struct evhttp_request *req, void *arg) {
-    httpserver_ProcessRequest(req);
-}
- 
- /**
-  * @brief ...
-  * 
-  * @param host ...
-  * @param port ...
-  * @param nthreads ...
-  * @param backlog ...
-  * @return int
-  */
- int httpserver_start(char* host, int port, int nthreads, int backlog) 
+*/
+
+ int websocket_write(struct lws *wsi_in, char *content, int str_size_in) 
 {
-  int r, i;
-  int nfd = httpserver_bindsocket(host, port, backlog);
-  if (nfd < 0) return -1;
-  pthread_t ths[nthreads];
-  for (i = 0; i < nthreads; i++) {
-    struct event_base *base = event_init();
-    if (base == NULL) return -1;
-    struct evhttp *httpd = evhttp_new(base);
-    if (httpd == NULL) return -1;
-    r = evhttp_accept_socket(httpd, nfd);
-    if (r != 0) return -1;
-    evhttp_set_gencb(httpd, httpserver_GenericHandler, NULL);
-    r = pthread_create(&ths[i], NULL, httpserver_Dispatch, base);
-    if (r != 0) return -1;
-  }
-  for (i = 0; i < nthreads; i++) {
-    pthread_join(ths[i], NULL);
-  }
+    if (content == NULL || wsi_in == NULL)
+        return -1;
+
+    int n;
+    int contentLen;
+    char *out = NULL;
+
+    if (str_size_in < 1) 
+        contentLen = strlen(content);
+    else
+        contentLen = str_size_in;
+
+    char* responceMessage;
+    int responceLength = proto(content, contentLen, &responceMessage);        
+    
+    out = (char *)malloc(sizeof(char)*(LWS_SEND_BUFFER_PRE_PADDING + responceLength + LWS_SEND_BUFFER_POST_PADDING));
+    
+    memcpy (out + LWS_SEND_BUFFER_PRE_PADDING, responceMessage, responceLength );
+    
+    free(responceMessage);
+    
+    n = lws_write(wsi_in, out + LWS_SEND_BUFFER_PRE_PADDING, responceLength, LWS_WRITE_TEXT);
+
+    free(out);
+
+    return n;
 }
 
+
+static int ws_service_callback(
+                         struct lws *wsi,
+                         enum lws_callback_reasons reason, void *user,
+                         void *in, size_t len)
+{
+
+    switch (reason) {
+
+        case LWS_CALLBACK_ESTABLISHED:
+            break;
+
+        case LWS_CALLBACK_RECEIVE:
+            websocket_write(wsi ,(char *)in, -1);
+            break;
+	    
+	case LWS_CALLBACK_CLOSED:
+	    break;
+
+	default:
+		break;
+    }
+
+    return 0;
+}
+
+struct per_session_data 
+{
+    int fd;
+};
+ 
+ 
 /**
  * @brief ...
  * 
@@ -279,11 +245,48 @@ int main(int argc, char **argv)
         pthread_mutex_init(&selectconnectionlock[i], NULL);
     }
     
-    if(httpserver_start(addr, port, CONNECTION_BACKLOG, CONNECTION_BACKLOG) == -1)
-    {
-        syslog(LOG_ERR, "Failed to start server");
-        goto exit;
+    struct lws_context_creation_info info;
+    struct lws_protocols protocol;
+    struct lws_context *context;
+    // Not using ssl
+    const char *cert_path = NULL;
+    const char *key_path = NULL;
+    // no special options
+    int opts = 0;
+
+    //* setup websocket protocol */
+    protocol.name = "websocket_protocol";
+    protocol.callback = ws_service_callback;
+    protocol.per_session_data_size=sizeof(struct per_session_data);
+    protocol.rx_buffer_size = 0;
+
+    //* setup websocket context info*/
+    memset(&info, 0, sizeof info);
+    info.port = port;
+    info.iface = addr;
+    info.protocols = &protocol;
+    info.extensions = lws_get_internal_extensions();
+    info.ssl_cert_filepath = cert_path;
+    info.ssl_private_key_filepath = key_path;
+    info.gid = -1;
+    info.uid = -1;
+    info.options = opts;
+
+    //* create libwebsocket context. */
+    context = lws_create_context(&info);
+    if (context == NULL) {
+        syslog(LOG_ERR, "Websocket context create error.");
+        return -1;
     }
+
+    syslog(LOG_INFO, "Websocket context create success.");
+
+    //* websocket service */
+    while ( !destroy_flag ) {
+        lws_service(context, 1);
+    }
+    usleep(10);
+    lws_context_destroy(context);
   
   exit:
     free(connections);

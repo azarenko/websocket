@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script type="text/javascript">
+            
+            var socket = new WebSocket("ws://localhost");
+
+            function submit() 
+            {
+              socket.send(JSON.stringify({"type":"ws_user", "action":"get_data", "data":{"token":"$2a$06$RM7OJX6iKrt8JeyeMWwsCu"}}
+));
+            };
+
+            socket.onmessage = function(event) 
+            {
+              var textbox = document.getElementById("serverResponce");
+              textbox.innerText = event.data;
+            };
+
+            socket.onerror = function(error)
+            {
+                alert("Error: " + error.message);
+            };
+            
+            socket.onopen = function() 
+            {
+                alert("Connection estabilish");
+            };
+            
+        </script>
+    </head>
+    <body>
+        <input type="button" value="Send message to server" onclick="submit();" />
+        <p>Server responce</p>
+        <div id="serverResponce"></div>
+    </body>
+</html>

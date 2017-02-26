@@ -51,7 +51,7 @@ int proto(char* reqdata, int len, const char** responceMessage)
         sprintf(*responceMessage, "%s", "{error:'Error persing type property'}");
         syslog(LOG_ERR, *responceMessage);
 	  
-        return 200;
+        return strlen(*responceMessage);
     }
     
     PGresult *res;    
@@ -67,7 +67,7 @@ int proto(char* reqdata, int len, const char** responceMessage)
         if(db_login(&conn) == 0)
         {
             pthread_mutex_unlock(&selectconnectionlock[connectionId]);
-            return 500;
+            return strlen(*responceMessage);
         }
     }
     
@@ -92,7 +92,7 @@ int proto(char* reqdata, int len, const char** responceMessage)
     clearres(conn, res);
     
     pthread_mutex_unlock(&selectconnectionlock[connectionId]);
-    return 200;
+    return strlen(*responceMessage);
 }
 
 /**
