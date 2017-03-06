@@ -97,7 +97,7 @@ int proto(char* reqdata, int len, const char** responceMessage)
         else 
         {
             sprintf(*responceMessage,"%s",PQgetvalue(res, 0, 0));
-            if(debug>0)syslog(LOG_ERR,"exec sql ok. responce = %s", *responceMessage);
+            if(debug>0)syslog(LOG_ERR,"exec sql ok");
         }         
     }
     clearres(conn, res);
