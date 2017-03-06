@@ -20,15 +20,6 @@ int port;
 // 0:nothing; 1:critical_error; 2:all_warnings;
 int debug;
 
-// over this in second kill session if not new pocket
-int waitinactive;
-
-// time for repetative send data (example send data to monitor)
-int oftentime;
-
-// wait this time if not received all data in one pocket
-int betweentimeout;
-
 //
 // primary database
 //
@@ -98,10 +89,6 @@ int secondarytimeout;
 // prefer  (the default) will negotiate, trying first an SSL connection, then if that fails, trying a regular non-SSL connection;
 // require will try only an SSL connection.
 const char* secondaryssl;
-
-// transfring simple data to
-const char* transferaddr;
-int transferport;
 
 int isdaemon;
 

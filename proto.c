@@ -43,7 +43,7 @@ int proto(char* reqdata, int len, const char** responceMessage)
     *responceMessage = malloc(sizeof(char) * MAX_CONTENT_LEN);
     bzero(*responceMessage, MAXLENQUERY);
     
-    if(debug>1)syslog(LOG_INFO,"Receive req: %s", reqdata);
+    if(debug>0)syslog(LOG_INFO,"Receive req: %s", reqdata);
   
     cJSON *root = cJSON_Parse(reqdata);
     
@@ -76,9 +76,16 @@ int proto(char* reqdata, int len, const char** responceMessage)
     char query[MAXLENQUERY];
     bzero(query,MAXLENQUERY);
     
-    sprintf(query,"SELECT %s('%s');", type->valuestring, reqdata);
+    if(debug>0)
+    {
+    	sprintf(query,"SELECT %s_dev('%s');", type->valuestring, reqdata);
+    }
+    else
+    {
+	sprintf(query,"SELECT %s('%s');", type->valuestring, reqdata);
+    }
     
-    if(debug>1)syslog(LOG_INFO,"Execute sql: %s", query);
+    if(debug>0)syslog(LOG_INFO,"Execute sql: %s", query);
     
     res = getexecsql(conn, query);
     if(res)
@@ -90,7 +97,7 @@ int proto(char* reqdata, int len, const char** responceMessage)
         else 
         {
             sprintf(*responceMessage,"%s",PQgetvalue(res, 0, 0));
-            if(debug>1)syslog(LOG_ERR,"exec sql ok. responce = %s", *responceMessage);
+            if(debug>0)syslog(LOG_ERR,"exec sql ok. responce = %s", *responceMessage);
         }         
     }
     clearres(conn, res);
