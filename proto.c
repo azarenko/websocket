@@ -103,6 +103,7 @@ int proto(char* reqdata, int len, const char** responceMessage)
     clearres(conn, res);
     
     pthread_mutex_unlock(&selectconnectionlock[connectionId]);
+    if(debug>0)syslog(LOG_ERR,"Send responce to client: %s", *responceMessage);
     return strlen(*responceMessage);
 }
 

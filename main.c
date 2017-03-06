@@ -18,7 +18,7 @@
 #include <sys/types.h>
 #include <locale.h>
 #include <libpq-fe.h>
-#include <libwebsockets.h>>
+#include <libwebsockets.h>
 
 #include "cmdparam.h"
 #include "settings.h"
