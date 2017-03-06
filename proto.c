@@ -42,6 +42,8 @@ int proto(char* reqdata, int len, const char** responceMessage)
 {
     *responceMessage = malloc(sizeof(char) * MAX_CONTENT_LEN);
     bzero(*responceMessage, MAXLENQUERY);
+    
+    if(debug>1)syslog(LOG_INFO,"Receive req: %s", reqdata);
   
     cJSON *root = cJSON_Parse(reqdata);
     
@@ -75,6 +77,8 @@ int proto(char* reqdata, int len, const char** responceMessage)
     bzero(query,MAXLENQUERY);
     
     sprintf(query,"SELECT %s('%s');", type->valuestring, reqdata);
+    
+    if(debug>1)syslog(LOG_INFO,"Execute sql: %s", query);
     
     res = getexecsql(conn, query);
     if(res)
