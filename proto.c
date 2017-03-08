@@ -20,9 +20,11 @@
 #include <semaphore.h>
 #include <pthread.h>
 #include <time.h>
+#include <libwebsockets.h>
 
 #include "proto.h"
 #include "settings.h"
+#include "fifo.h"
 
 #define MAXLENQUERY     2048
 #define REPORTLEN       256
@@ -37,6 +39,49 @@
 #define FETCH "FETCH ALL in cursor%u"
 #define CLOSE "CLOSE cursor%u"
 
+void *threadFunc(void *arg)
+{   
+        while(1)
+        {
+	    wsinf *pwsinf;
+	    
+            if(fifo_get(&pwsinf) == EXIT_FAILURE)
+            {
+                usleep(100 * 1000);
+                continue;
+            }        
+                
+                
+	    if (pwsinf->content == NULL || pwsinf->wsi_in == NULL)
+	    {
+	      free(pwsinf);
+	      continue;
+	    }
+
+	    int contentLen;
+	    char *out = NULL;
+
+	    if (pwsinf->str_size_in < 1) 
+		contentLen = strlen(pwsinf->content);
+	    else
+		contentLen = pwsinf->str_size_in;
+
+	    char* responceMessage;
+	    int responceLength = proto(pwsinf->content, contentLen, &responceMessage);        
+	    
+	    out = (char *)malloc(sizeof(char)*(LWS_SEND_BUFFER_PRE_PADDING + responceLength + LWS_SEND_BUFFER_POST_PADDING));
+	    
+	    memcpy (out + LWS_SEND_BUFFER_PRE_PADDING, responceMessage, responceLength );
+	    
+	    free(responceMessage);
+	    
+	    lws_write(pwsinf->wsi_in, out + LWS_SEND_BUFFER_PRE_PADDING, responceLength, LWS_WRITE_TEXT);
+
+	    free(out);
+	    
+	    free(pwsinf);
+        }
+}
 
 int proto(char* reqdata, int len, const char** responceMessage)
 {

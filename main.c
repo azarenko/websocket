@@ -24,6 +24,7 @@
 #include "settings.h"
 #include "sockutils.h"
 #include "proto.h"
+#include "fifo.h"
 
 #define MAX_CONTENT_LEN 1024 * 512
 
@@ -60,34 +61,23 @@ static void sighandler(int signal) {
     }
 }
  
-int websocket_write(struct lws *wsi_in, char *content, int str_size_in) 
+void websocket_receive(struct lws *wsi_in, char *content, int str_size_in) 
 {
-    if (content == NULL || wsi_in == NULL)
-        return -1;
-
-    int n;
-    int contentLen;
-    char *out = NULL;
-
-    if (str_size_in < 1) 
-        contentLen = strlen(content);
+    if(isfifofull())
+    {
+      
+    }
     else
-        contentLen = str_size_in;
-
-    char* responceMessage;
-    int responceLength = proto(content, contentLen, &responceMessage);        
+    {
+      wsinf *pwsinf;
+      pwsinf = malloc(sizeof(wsinf));
+      pwsinf->wsi_in = wsi_in;
+      pwsinf->content = content;
+      pwsinf->str_size_in = str_size_in;
+      fifo_put(pwsinf);
+    }
     
-    out = (char *)malloc(sizeof(char)*(LWS_SEND_BUFFER_PRE_PADDING + responceLength + LWS_SEND_BUFFER_POST_PADDING));
-    
-    memcpy (out + LWS_SEND_BUFFER_PRE_PADDING, responceMessage, responceLength );
-    
-    free(responceMessage);
-    
-    n = lws_write(wsi_in, out + LWS_SEND_BUFFER_PRE_PADDING, responceLength, LWS_WRITE_TEXT);
-
-    free(out);
-
-    return n;
+    return;
 }
 
 
@@ -103,7 +93,7 @@ static int ws_service_callback(
             break;
 
         case LWS_CALLBACK_RECEIVE:
-            websocket_write(wsi ,(char *)in, -1);
+            websocket_receive(wsi ,(char *)in, -1);
             break;
 	    
 	case LWS_CALLBACK_CLOSED:
@@ -185,7 +175,8 @@ int main(int argc, char **argv)
 	};
 	sigaction(SIGHUP, &siginfo, NULL);
 	sigaction(SIGTERM, &siginfo, NULL);
-    
+	
+    fifo_init();
     pthread_mutex_init(&connectionm, NULL);
 	
     connections = (PGconn**)malloc(sizeof(PGconn*) * CONNECTION_BACKLOG);
@@ -235,6 +226,12 @@ int main(int argc, char **argv)
 
     syslog(LOG_INFO, "Websocket context create success.");
 
+    for(i=0; i<CONNECTION_BACKLOG; i++)
+    {
+        pthread_t pth;	
+        pthread_create(&pth, NULL, threadFunc, NULL);
+    }
+    
     //* websocket service */
     while ( !destroy_flag ) {
         lws_service(context, 1);
@@ -243,6 +240,7 @@ int main(int argc, char **argv)
     lws_context_destroy(context);
   
   exit:
+    fifo_free();
     free(connections);
     free(selectconnectionlock);
     syslog(LOG_INFO, "Stoping.");
