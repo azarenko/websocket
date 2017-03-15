@@ -53,10 +53,6 @@ static void sighandler(int signal) {
             break;
         case SIGHUP:
             syslog(LOG_INFO, "Received signal hangup.");
-            if(readSettings(configFilePath) == EXIT_FAILURE)
-            {
-                syslog(LOG_ERR, "Configuration file error.");                
-            }
             break;
     }
 }
