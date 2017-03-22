@@ -75,9 +75,11 @@ void *threadFunc(void *arg)
 	    
 	    free(responceMessage);
 	    
-	    lws_write(pwsinf->wsi_in, out + LWS_SEND_BUFFER_PRE_PADDING, responceLength, LWS_WRITE_TEXT);
-
+	    lws_write(pwsinf->wsi_in, out + LWS_SEND_BUFFER_PRE_PADDING, responceLength, LWS_WRITE_TEXT);	    
+	    
 	    free(out);
+	    
+	    lws_callback_on_writable(pwsinf->wsi_in);
 	    
 	    free(pwsinf);
         }

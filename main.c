@@ -82,21 +82,17 @@ static int ws_service_callback(
                          enum lws_callback_reasons reason, void *user,
                          void *in, size_t len)
 {
-
     switch (reason) {
-
-        case LWS_CALLBACK_ESTABLISHED:
-            break;
 
         case LWS_CALLBACK_RECEIVE:
             websocket_receive(wsi ,(char *)in, -1);
             break;
+	
+	case LWS_CALLBACK_SERVER_WRITEABLE:
+	    return -1;
 	    
-	case LWS_CALLBACK_CLOSED:
-	    break;
-
 	default:
-		break;
+	    break;
     }
 
     return 0;
