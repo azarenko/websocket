@@ -61,7 +61,7 @@ void websocket_receive(struct lws *wsi_in, char *content, int str_size_in)
 {
     if(isfifofull())
     {
-      
+      lws_callback_on_writable(wsi_in);
     }
     else
     {
