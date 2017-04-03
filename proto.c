@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <math.h>
 #include <locale.h>
 #include <sys/types.h>
@@ -78,8 +80,6 @@ void *threadFunc(void *arg)
 	    lws_write(pwsinf->wsi_in, out + LWS_SEND_BUFFER_PRE_PADDING, responceLength, LWS_WRITE_TEXT);	    
 	    
 	    free(out);
-	    
-	    lws_callback_on_writable(pwsinf->wsi_in);
 	    
 	    free(pwsinf);
         }
@@ -165,7 +165,12 @@ int db_login(PGconn **conn)
     pthread_mutex_lock(&connectionm);
     if (PQstatus(*conn) == CONNECTION_BAD) 
     {
-        char *pgoptions=NULL, *pgtty=NULL;
+        char appnameenv[1024];
+	bzero(appnameenv,1024);
+	sprintf(appnameenv, "%s=%s", "PGAPPNAME", program_invocation_short_name);
+	putenv(appnameenv);
+	
+	char *pgtty=NULL, *pgoptions=NULL;
         *conn = PQsetdbLogin(primarypghost, primarypgport, pgoptions, pgtty, primarydbname, primarypglogin, primarypgpwd);
         if (PQstatus(*conn) == CONNECTION_BAD) 
         { 
