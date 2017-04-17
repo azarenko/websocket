@@ -1,0 +1,16 @@
+config:
+  target: "ws://my2.uboro.eu:65433"
+  phases:
+    -
+      duration: 60
+      arrivalRate: 20
+  ws:
+    # Ignore SSL certificate errors
+    # - useful in *development* with self-signed certs
+    rejectUnauthorized: false
+scenarios:
+  -
+    engine: "ws"
+    flow:
+      -
+        send: "{\"type\":\"ws_user\",\"action\":\"get_data\",\"data\":{\"token\":\"$2a$06$RM7OJX6iKrt8JeyeMWwsCu\"},\"dt\":\"2017-04-17T20:01:18.430Z\"}"

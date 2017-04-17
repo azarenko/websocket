@@ -7,7 +7,7 @@ Current Build Directory Index=0
 ProjectRootRelative=./
 
 [CMake][CMake Build Directory 0]
-Build Directory Path=file:///home/user/projects/websocket/build
+Build Directory Path=file:///home/serega/projects/websocket/build
 Build Type=Debug
 CMake Binary=file:///usr/bin/cmake
 Environment Profile=
